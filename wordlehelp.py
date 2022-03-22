@@ -45,6 +45,7 @@ Enter your next guess   :...
 ...
 '''
 
+from email.quoprimime import quote
 import encodings
 import os
 from sre_parse import State
@@ -67,6 +68,8 @@ import argparse
     Can Nuhlar for Turkish words (https://github.com/CanNuhlar/Turkce-Kelime-Listesi)  
 '''
 
+TRLETTERS=['A', 'B', 'C', 'Ç', 'D', 'E', 'F', 'G', 'Ğ', 'H', 'I', 'İ', 'J', 'K', 
+           'L', 'M', 'N', 'O', 'Ö', 'P', 'R', 'S', 'Ş', 'T', 'U', 'Ü', 'V', 'Y', 'Z']
 
 ''' To pass "the Turkey Test" İIiı upper lower conversions must be provided
 '''
@@ -87,16 +90,47 @@ def wrdhlower(str):
     return str.translate(TRLOWERMAP).lower()
 
 
+
+class SolutionSet():
+    '''5 letter words'''
+    def __init__(self, wordsfile):
+
+        self.trlowermap={
+            ord(u'I'): u'ı',
+            ord(u'İ'): u'i',
+        }
+        self.truppermap={
+            ord(u'ı'): u'I',
+            ord(u'i'): u'İ',            
+        }
+
+        self.words=[]
+        with open(file=wordsfile, mode='r', encoding='utf8') as fd:
+            self.words = fd.readlines()
+        
+        self.words=[wrdhupper(w).rsplit()[0] for w in self.words]
+        
+        self.words.sort();
+        
+    def removeWords(self, nonexistingletters, existingletters, onspotletters):
+        pass
+    
+    def has(self, word):
+        return word in self.words
+        
+    def dump(self):
+        for w in self.words:
+            print(w) # print adds \n to the end 
+
 class Node():
     def __init__(self, state, parent, action):
         self.state = state
         self.parent = parent
         self.action = action
         
-
 class Frontier():
-    def __init__(self):
-        self.frontier=[]
+    def __init__(self, solution_set):
+        self.frontier=solution_set
 
     def addNode(self, node):
         self.frontier.append(node)
@@ -116,53 +150,49 @@ class Frontier():
         return any(node.state == state for node in self.frontier)
 
 
-class SolutionSet():
-    '''5 letter words'''
-    def __init__(self, wordsfile):
+class State():
+    def __init__(self):
+        self.notexist = []
+        self.exist = []
+        self.match = {}
 
-        self.trlowermap={
-            ord(u'I'): u'ı',
-            ord(u'İ'): u'i',
-        }
-        self.truppermap={
-            ord(u'ı'): u'I',
-            ord(u'i'): u'İ',            
-        }
+    def formState(self, guess):
+        guess = wrdhupper(guess)
+        print("For guessed word '"+guess+"' enter the feedback provided by the game")
+        
+        self.match = input("Letters in correct place: ")
+        self.match = wrdhupper(self.match)
+        if not all(letter in TRLETTERS for letter in list(self.match)):
+            raise Exception("There is a wrong letter in the entry ", self.match)
+        
+        self.exist = input("Letters in wrong place  : ")
+        self.exist = wrdhupper(self.exist)
+        if not all(letter in TRLETTERS for letter in list(self.exist)):
+            raise Exception("There is a wrong letter in the entry ", self.exists())
 
-        self.words=[]
-        with open(file=wordsfile, mode='r', encoding='utf8') as fd:
-            self.words = fd.readlines()
-            
-        #self.words=[w.translate(self.truppermap).rsplit()[0].upper() for w in self.words]
+        for letter in list(guess):
+            if letter not in self.match + self.exist:
+                self.notexist.append(letter)
         
-        self.words=[wrdhupper(w).rsplit()[0] for w in self.words]
-        
-        self.words.sort();
-        
-    def removeWords(self, nonexistingletters, existingletters, onspotletters):
-        pass
-    
-    def has(self, word):
-        return word in self.words
-        
-    def dump(self):
-        for w in self.words:
-            print(w) # print adds \n to the end 
+        print("Letters not exist : ", ''.join(self.notexist))
+
 
 class  Wordle():
-    def __init__(self, wordlsfile, firstguess):
+    def __init__(self, wordsfile, firstguess):
         
-        self.solutionSet = SolutionSet(wordlsfile)        
+        self.solutionSet = SolutionSet(wordsfile)        
         guess = wrdhupper(firstguess)        
         if len(guess) != 5:
             raise Exception("Guess word must have 5 letters")
         elif not self.solutionSet.has(guess): 
             raise Exception("Guess word does not exist in the provided word list!")
         
-        self.node = Node(state=guess, parent=None, action=None)
-
+        self.state = State().formState(guess)
+        
+        
     def solve(self):
-        pass
+        self.node = Node(state=self.state, parent=None, action=None)
+
 
 def print_usage():
     print('''Usage: wordlehelp.py <word list file> <first guess>''')
