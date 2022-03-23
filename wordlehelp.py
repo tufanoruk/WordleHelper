@@ -7,25 +7,35 @@ __license__ = "Creative Commons Attribution 4.0 International"
 __credits__ = ["Brin Yu", "Can Nuhlar"]
 __email__ = "tufan.oruk@gmail.com"
 
-'''To discover solution frontier a file containing list of 5 letter words needs to be provided. 
-You provide your initial guess as the initial state to the program and enter the feedback provided by the game.  
-"state" is letters not-exist, exist and fully matched.
+''' Thanks to 
+    Brin Yu (edX CS50AI) for algorithm template and 
+    Can Nuhlar for Turkish words (https://github.com/CanNuhlar/Turkce-Kelime-Listesi)  
+'''
+
+''' To get the initial state you need to provide 
+    - a file containing list of 5 letter words and 
+    - your initial guess.  
+    "state" is build from the feedback game provides about the guess.
+    A letter in the guess is etiher 
+    - not-exist, 
+    - exist but misalligned or 
+    - on spot
 
 Say the word selected by the game is "TUFAN"
-Your first guess is "BRAIN" thus game provied 
+Your first guess is "BRAIN" thus game provies following information about the letters 
     B,R,I letters are not exist, 
-    A exist but not in corrrect place
-    N is a match  
+    "A" exist but not in corrrect place
+    "N" esixts and on the spot  
     
-You provide this result as follows
+A sample flow is below;
 
-% python3 wordlehelp.py <five letter word list file> BRAIN
+% python3 ./wordlehelp.py <five letter word list file> BRAIN
 Letters in correct place: N
 Letters in wrong place  : A
 (
-    program figures out B,R and I do not exist in the word.
+    program figures out B,R and I are not exist in the word.
     and provides a list of 5 letter words to select from,
-    and asks for your next guess
+    and asks for your next guess.
 ) 
 Letters not exist       : BRI  
 Possible words;
@@ -47,11 +57,6 @@ Enter your next guess   :...
 
 import re
 import sys
-
-''' Thanks to 
-    Brin Yu (edX CS50AI) for algorithm template and 
-    Can Nuhlar for Turkish words (https://github.com/CanNuhlar/Turkce-Kelime-Listesi)  
-'''
 
 ANYLETTER='.'
 
@@ -77,7 +82,7 @@ def print_usage():
     print('''Usage: wordlehelp.py <word list file> <first guess>''')
 
 class SolutionSet():
-    '''5 letter words'''
+    '''given 5 letter words make up the solution set'''
     def __init__(self, wordsfile):
         self.words=[]
         with open(file=wordsfile, mode='r', encoding='utf8') as fd:
@@ -88,7 +93,10 @@ class SolutionSet():
         self.words = list(set(self.words))
         
     def removeWords(self, nonexistingletters, existingletters, onspotletters):
-        '''remove words that contains nonexistinfletters and existing letters fron solution set'''
+        '''reduce the solution set from the provided information
+        select the words whith letters on the spot.
+        remove words that contains nonexistingletters and existing letters
+        '''
         print("Number of words ",len(self.words))
     
         exp = ''.join(onspotletters)
@@ -114,7 +122,6 @@ class SolutionSet():
         #print(self.words)
         self.words.sort()
         
-        
     def has(self, word):
         return word in self.words
         
@@ -127,12 +134,19 @@ class SolutionSet():
 
 class Node():
     '''state is a State object, parent is a Node object, 
-    actipn is the guesses word which takes us here'''
+    action is the guesses word which takes us here'''
     def __init__(self, state, parent, action):
         self.state = state
         self.parent = parent
         self.action = action
         
+    def print(self):
+        self.state.print()
+        print(",",end="")
+        print(self.action,end=",")
+        if self.parent is not None:
+            self.parent.print()
+        print()
         
 class Frontier():
     '''Possible sollutions for the problem'''
@@ -144,7 +158,7 @@ class Frontier():
         self.nodes.append(node)
         
     def removeNode(self):
-        '''removing node shortens the solution set to make us closer to the solution'''
+        '''removing node reduces the solution set to make us closer to the solution'''
         if self.isEmpty(): 
             raise Exception("Empty frontier")
         else:
@@ -197,14 +211,17 @@ class State():
         print("Letters not exist : ", ''.join(self.notexist))
         
     def print(self):
-        print(''.join(self.onspot))
+        print(''.join(self.onspot), end="")
         
     def isGoal(self):
         '''there souldn't be any misalligned and nonexisting letters and have a full match'''
         return len(self.misalligned) == 0 and len(self.notexist) == 0 and all (letter != 'ANYLETTER' for letter in self.onspot)
 
 class  Wordle():
+    '''helps solving the puzzle '''
+    
     def __init__(self, wordsfile, firstguess):
+        '''initilize the state and the frontier'''
         solution_set = SolutionSet(wordsfile)
         self.frontier = Frontier(solution_set)
         
@@ -219,7 +236,7 @@ class  Wordle():
     def solve(self):
         ''' Here I used an (AI) search algorithm
         Start w/ a frontier that contains initial state
-        Start w/ an empty explored set - not needed in thsi problem
+        Start w/ an empty explored set - not needed in this problem
         Repeat:
             - frontier empty => no solution
             - remove a node from frontier
@@ -230,7 +247,7 @@ class  Wordle():
         start = Node(state=self.state, parent=None, action=None)        
         self.frontier.addNode(start)
         
-        start.state.print()
+        #start.state.print()
         
         while True:
             if self.frontier.isEmpty():
@@ -241,6 +258,8 @@ class  Wordle():
             if node.state.isGoal():
                 print("Solution is ", end="")
                 node.state.print()
+                '''print how we get here'''
+                node.print()
                 return
 
             '''action to get to the next state'''
