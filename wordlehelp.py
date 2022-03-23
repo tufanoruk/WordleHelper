@@ -48,17 +48,7 @@ Enter your next guess   :...
 import re
 import sys
 
-''' Here I used an (AI) search algorithm
-    Start w/ a frontier that contains initial state
-    Start w/ an empty explored set
-    Repeat:
-        - frontier empty => no solution
-        - remove a node from frontier
-        - node has "goal state" => solution (~done)
-        - add the node to the explored set
-        - expand node, add adjacent  nodes to frontier if they aren't already in the frontier OR the explored set
-        
-    Thanks to 
+''' Thanks to 
     Brin Yu (edX CS50AI) for algorithm template and 
     Can Nuhlar for Turkish words (https://github.com/CanNuhlar/Turkce-Kelime-Listesi)  
 '''
@@ -227,6 +217,16 @@ class  Wordle():
         self.state = State(guess)        
         
     def solve(self):
+        ''' Here I used an (AI) search algorithm
+        Start w/ a frontier that contains initial state
+        Start w/ an empty explored set - not needed in thsi problem
+        Repeat:
+            - frontier empty => no solution
+            - remove a node from frontier
+            - node has "goal state" => solution (~done)
+            - add the node to the explored set
+            - expand node, add adjacent  nodes to frontier if they aren't already in the frontier OR the explored set
+        '''
         start = Node(state=self.state, parent=None, action=None)        
         self.frontier.addNode(start)
         
@@ -243,6 +243,7 @@ class  Wordle():
                 node.state.print()
                 return
 
+            '''action to get to the next state'''
             self.frontier.solutionSet.dump()
             print("")
             while True:        
