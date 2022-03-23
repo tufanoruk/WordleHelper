@@ -47,11 +47,13 @@ Enter your next guess   :...
 
 from email.quoprimime import quote
 import encodings
+from nis import match
 import os
 from sre_parse import State
 import sys
 import io
 import argparse
+from tracemalloc import start
 
 ''' Here I used an (AI) search algorithm
     Start w/ a frontier that contains initial state
@@ -89,7 +91,8 @@ def wrdhupper(str):
 def wrdhlower(str):
     return str.translate(TRLOWERMAP).lower()
 
-
+def print_usage():
+    print('''Usage: wordlehelp.py <word list file> <first guess>''')
 
 class SolutionSet():
     '''5 letter words'''
@@ -118,84 +121,121 @@ class SolutionSet():
     def has(self, word):
         return word in self.words
         
+    def isEmpty(self):
+           return len(self.words) == 0
+        
     def dump(self):
         for w in self.words:
             print(w) # print adds \n to the end 
 
 class Node():
+    '''state is a State object, parent is a Node object, 
+    actipn is the guesses word which takes us here'''
     def __init__(self, state, parent, action):
         self.state = state
         self.parent = parent
         self.action = action
         
+        
 class Frontier():
+    '''Possible sollutions for the problem'''
     def __init__(self, solution_set):
-        self.frontier=solution_set
+        self.solutionSet=solution_set
+        self.nodes = []
 
     def addNode(self, node):
-        self.frontier.append(node)
+        self.nodes.append(node)
         
     def removeNode(self):
-        if self.empty():
-            raise Exception("empty frontier")
+        '''removing node shortens the solution set to make us closer to the solution'''
+        if self.isEmpty(): 
+            raise Exception("Empty frontier")
         else:
-            node = self.frontier[-1]
-            self.frontier = self.frontier[:-1]
+            node = self.nodes[-1]
+            self.solutionSet.removeWords(nonexistingletters=node.state.notexist,
+                                     existingletters=node.state.exist,
+                                     onspotletters=node.state.match)
+
             return node
 
     def isEmpty(self):
-        return len(self.frontier) == 0    
+        return len(self.nodes) == 0
+        #return self.solutionSet.isEmpty()    
 
-    def containsState(self, state):
-        return any(node.state == state for node in self.frontier)
 
 
 class State():
-    def __init__(self):
+    '''state is the feedback provided by the wordle game given guessed word
+    we take this feedback from the user here and form the state'''
+    def __init__(self, guess):
         self.notexist = []
         self.exist = []
-        self.match = {}
+        self.match =['?','?','?','?','?']
+        self.__getInput(guess)
 
-    def formState(self, guess):
+    def __getInput(self, guess):    
         guess = wrdhupper(guess)
         print("For guessed word '"+guess+"' enter the feedback provided by the game")
         
-        self.match = input("Letters in correct place: ")
-        self.match = wrdhupper(self.match)
-        if not all(letter in TRLETTERS for letter in list(self.match)):
-            raise Exception("There is a wrong letter in the entry ", self.match)
+        match = input("Letters in correct place: ")
+        match = wrdhupper(match)
+        if not all(letter in list(guess) for letter in list(match)):
+            raise Exception("There is a wrong letter in the entry ", match)
         
         self.exist = input("Letters in wrong place  : ")
         self.exist = wrdhupper(self.exist)
-        if not all(letter in TRLETTERS for letter in list(self.exist)):
-            raise Exception("There is a wrong letter in the entry ", self.exists())
+        if not all(letter in list(guess) for letter in list(self.exist)):
+            raise Exception("There is a wrong letter in the entry ", self.exist)
 
+        i=0
         for letter in list(guess):
-            if letter not in self.match + self.exist:
+            if i<len(match) and list(match)[i] == letter:
+                self.match[i] = letter 
+            i = i+1
+            if letter not in match + self.exist:
                 self.notexist.append(letter)
         
         print("Letters not exist : ", ''.join(self.notexist))
-
+        
+    def print(self):
+        print(''.join(self.match))
+        
+    def isGoal(self):
+        return len(self.exist) == 5 and len(self.notexist) == 0 and all (letter != '?' for letter in self.match)
 
 class  Wordle():
     def __init__(self, wordsfile, firstguess):
+        solution_set = SolutionSet(wordsfile)
+        self.frontier = Frontier(solution_set)
         
-        self.solutionSet = SolutionSet(wordsfile)        
         guess = wrdhupper(firstguess)        
         if len(guess) != 5:
             raise Exception("Guess word must have 5 letters")
-        elif not self.solutionSet.has(guess): 
+        elif not solution_set.has(guess): 
             raise Exception("Guess word does not exist in the provided word list!")
         
-        self.state = State().formState(guess)
-        
+        self.state = State(guess)        
         
     def solve(self):
-        self.node = Node(state=self.state, parent=None, action=None)
-
-
-def print_usage():
-    print('''Usage: wordlehelp.py <word list file> <first guess>''')
+        start = Node(state=self.state, parent=None, action=None)        
+        self.frontier.addNode(start)
+        
+        start.state.print()
+        
+        while True:
+            if self.frontier.isEmpty():
+                raise Exception("There is no solution!")
+            
+            node = self.frontier.removeNode()
+            
+            if node.state.isGoal():
+                print("Solution is ", node.state.print())
+                return
+            
+            guess = input("Guess a new word : ")
+            state = State (guess)
+            child = Node(state=state, parent=node, action=guess)
+            self.frontier.addNode(child)
 
 def main():
     if len(sys.argv) != 3:
@@ -203,10 +243,8 @@ def main():
         exit();
         
     wrdl = Wordle(sys.argv[1], sys.argv[2])
-    
     wrdl.solve()
     
-        
 if __name__ == "__main__":
     try:
         main()
