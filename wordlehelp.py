@@ -45,15 +45,8 @@ Enter your next guess   :...
 ...
 '''
 
-from email.quoprimime import quote
-import encodings
-from nis import match
-import os
-from sre_parse import State
+import re
 import sys
-import io
-import argparse
-from tracemalloc import start
 
 ''' Here I used an (AI) search algorithm
     Start w/ a frontier that contains initial state
@@ -70,8 +63,7 @@ from tracemalloc import start
     Can Nuhlar for Turkish words (https://github.com/CanNuhlar/Turkce-Kelime-Listesi)  
 '''
 
-TRLETTERS=['A', 'B', 'C', 'Ç', 'D', 'E', 'F', 'G', 'Ğ', 'H', 'I', 'İ', 'J', 'K', 
-           'L', 'M', 'N', 'O', 'Ö', 'P', 'R', 'S', 'Ş', 'T', 'U', 'Ü', 'V', 'Y', 'Z']
+ANYLETTER='.'
 
 ''' To pass "the Turkey Test" İIiı upper lower conversions must be provided
 '''
@@ -97,27 +89,42 @@ def print_usage():
 class SolutionSet():
     '''5 letter words'''
     def __init__(self, wordsfile):
-
-        self.trlowermap={
-            ord(u'I'): u'ı',
-            ord(u'İ'): u'i',
-        }
-        self.truppermap={
-            ord(u'ı'): u'I',
-            ord(u'i'): u'İ',            
-        }
-
         self.words=[]
         with open(file=wordsfile, mode='r', encoding='utf8') as fd:
             self.words = fd.readlines()
         
         self.words=[wrdhupper(w).rsplit()[0] for w in self.words]
-        
         self.words.sort();
+        self.words = list(set(self.words))
         
     def removeWords(self, nonexistingletters, existingletters, onspotletters):
-        pass
+        '''remove words that contains nonexistinfletters and existing letters fron solution set'''
+        print("Number of words ",len(self.words))
     
+        exp = ''.join(onspotletters)
+        p = re.compile(exp)
+        self.words[:] = [w for w in self.words if p.search(w)]            
+        print("Number of words after selecting of words w/ matching' "+exp+"' is ", len(self.words))
+        #print(self.words)
+        
+        exp=''
+        if len(nonexistingletters) > 0:
+            exp = ''.join(nonexistingletters)
+            p = re.compile('['+exp+']')
+            self.words[:] = [w for w in self.words if not p.search(w)]            
+        print("Number of words after removal of words containing' "+exp+"' is ", len(self.words))
+        #print(self.words)
+        
+        exp=''
+        if len(existingletters) > 0:
+            exp = ''.join(existingletters)
+            p = re.compile('['+exp+']')
+            self.words[:] = [w for w in self.words if p.search(w)]            
+        print("Number of words after selecting of words containing' "+exp+"' is ", len(self.words))
+        #print(self.words)
+        self.words.sort()
+        
+        
     def has(self, word):
         return word in self.words
         
@@ -126,7 +133,7 @@ class SolutionSet():
         
     def dump(self):
         for w in self.words:
-            print(w) # print adds \n to the end 
+            print(w, end=",") # print adds \n to the end 
 
 class Node():
     '''state is a State object, parent is a Node object, 
@@ -153,15 +160,13 @@ class Frontier():
         else:
             node = self.nodes[-1]
             self.solutionSet.removeWords(nonexistingletters=node.state.notexist,
-                                     existingletters=node.state.exist,
-                                     onspotletters=node.state.match)
+                                     existingletters=node.state.misalligned,
+                                     onspotletters=node.state.onspot)
 
             return node
 
     def isEmpty(self):
         return len(self.nodes) == 0
-        #return self.solutionSet.isEmpty()    
-
 
 
 class State():
@@ -169,8 +174,8 @@ class State():
     we take this feedback from the user here and form the state'''
     def __init__(self, guess):
         self.notexist = []
-        self.exist = []
-        self.match =['?','?','?','?','?']
+        self.misalligned = []
+        self.onspot =[ANYLETTER, ANYLETTER, ANYLETTER, ANYLETTER, ANYLETTER]
         self.__getInput(guess)
 
     def __getInput(self, guess):    
@@ -182,26 +187,31 @@ class State():
         if not all(letter in list(guess) for letter in list(match)):
             raise Exception("There is a wrong letter in the entry ", match)
         
-        self.exist = input("Letters in wrong place  : ")
-        self.exist = wrdhupper(self.exist)
-        if not all(letter in list(guess) for letter in list(self.exist)):
-            raise Exception("There is a wrong letter in the entry ", self.exist)
+        self.misalligned = input("Letters in wrong place  : ")
+        self.misalligned = wrdhupper(self.misalligned)
+        if not all(letter in list(guess) for letter in list(self.misalligned)):
+            raise Exception("There is a wrong letter in the entry ", self.misalligned)
 
-        i=0
+        for matchedletter in list(match):
+            i=0
+            for letter in list(guess):
+                if matchedletter==letter:
+                    self.onspot[i] = letter 
+                    break
+                i=i+1                    
+
         for letter in list(guess):
-            if i<len(match) and list(match)[i] == letter:
-                self.match[i] = letter 
-            i = i+1
-            if letter not in match + self.exist:
+            if letter not in match + self.misalligned:
                 self.notexist.append(letter)
         
         print("Letters not exist : ", ''.join(self.notexist))
         
     def print(self):
-        print(''.join(self.match))
+        print(''.join(self.onspot))
         
     def isGoal(self):
-        return len(self.exist) == 5 and len(self.notexist) == 0 and all (letter != '?' for letter in self.match)
+        '''there souldn't be any misalligned and nonexisting letters and have a full match'''
+        return len(self.misalligned) == 0 and len(self.notexist) == 0 and all (letter != 'ANYLETTER' for letter in self.onspot)
 
 class  Wordle():
     def __init__(self, wordsfile, firstguess):
@@ -229,10 +239,19 @@ class  Wordle():
             node = self.frontier.removeNode()
             
             if node.state.isGoal():
-                print("Solution is ", node.state.print())
+                print("Solution is ", end="")
+                node.state.print()
                 return
+
+            self.frontier.solutionSet.dump()
+            print("")
+            while True:        
+                guess = input("Guess a new word : ")
+                if (not self.frontier.solutionSet.has(wrdhupper(guess))):
+                    print("This guess is not in the solution set!")
+                else:
+                    break
             
-            guess = input("Guess a new word : ")
             state = State (guess)
             child = Node(state=state, parent=node, action=guess)
             self.frontier.addNode(child)
