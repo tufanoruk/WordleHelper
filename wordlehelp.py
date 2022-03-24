@@ -102,7 +102,7 @@ class SolutionSet():
         exp = ''.join(onspotletters)
         p = re.compile(exp)
         self.words[:] = [w for w in self.words if p.search(w)]            
-        print("Number of words after selecting of words w/ matching' "+exp+"' is ", len(self.words))
+        print("Number of words after selecting of words w/ matching '"+exp+"' is ", len(self.words))
         #print(self.words)
         
         exp=''
@@ -110,15 +110,12 @@ class SolutionSet():
             exp = ''.join(nonexistingletters)
             p = re.compile('['+exp+']')
             self.words[:] = [w for w in self.words if not p.search(w)]            
-        print("Number of words after removal of words containing' "+exp+"' is ", len(self.words))
+        print("Number of words after removal of words containing '"+exp+"' is ", len(self.words))
         #print(self.words)
         
-        exp=''
         if len(existingletters) > 0:
-            exp = ''.join(existingletters)
-            p = re.compile('['+exp+']')
-            self.words[:] = [w for w in self.words if p.search(w)]            
-        print("Number of words after selecting of words containing' "+exp+"' is ", len(self.words))
+            self.words[:] = [w for w in self.words if self.__hasAll(w, existingletters)]            
+        print("Number of words after selecting of words containing '"+existingletters+"' is ", len(self.words))
         #print(self.words)
         self.words.sort()
         
@@ -131,6 +128,9 @@ class SolutionSet():
     def dump(self):
         for w in self.words:
             print(w, end=",") # print adds \n to the end 
+            
+    def __hasAll (self, word, letters):
+        return all (c in word for c in letters)
 
 class Node():
     '''state is a State object, parent is a Node object, 

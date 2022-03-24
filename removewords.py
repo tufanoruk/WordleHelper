@@ -36,7 +36,7 @@ def main():
     exp = ''.join(onspotletters)
     p = re.compile(exp)
     words[:] = [w for w in words if p.search(w)]            
-    print("Number of words after selecting of words w/ matching' "+exp+"' is ", len(words))
+    print("Number of words after selecting of words w/ matching '"+exp+"' is ", len(words))
     print(words)
     
     exp=''
@@ -44,16 +44,22 @@ def main():
         exp = ''.join(nonexistingletters)
         p = re.compile('['+exp+']')
         words[:] = [w for w in words if not p.search(w)]            
-    print("Number of words after removal of words containing' "+exp+"' is ", len(words))
+    print("Number of words after removal of words containing '"+exp+"' is ", len(words))
     print(words)
     
     exp=''
     if len(misallignedletters) > 0:
-        exp = ''.join(misallignedletters)
-        p = re.compile('['+exp+']')
-        words[:] = [w for w in words if p.search(w)]            
-    print("Number of words after selecting of words containing' "+exp+"' is ", len(words))
+        # exp = ''.join(misallignedletters)
+        # p = re.compile(exp)
+        # words[:] = [w for w in words if p.search(w)]            
+        words[:] = [w for w in words if hasAll(w, misallignedletters)]            
+    print("Number of words after selecting of words containing '"+misallignedletters+"' is ", len(words))
     print(words)
+ 
+    words[:] = [w for w in words if hasAll(w, misallignedletters)]            
+     
+def hasAll (word, letters):
+    return all (c in word for c in letters)
  
 if __name__ == "__main__":
     try:
