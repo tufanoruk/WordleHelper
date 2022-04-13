@@ -1,7 +1,11 @@
+#!/usr/bin/env python3
 '''work to remove words from bir word list'''
 
 import sys
 import re
+import termcolor
+
+ANYLETTER='.'
 
 TRUPPERMAP={
     ord(u'ı'): u'I',
@@ -23,43 +27,56 @@ def main():
     words.sort();
     words[:] = list(set(words))
  
-    nonexistingletters = input("Non existing letters: ")
-    misallignedletters = input("Misalligned letters : ")
-    onspotletters = input("Onspot letters (place .) : ")
- 
-    nonexistingletters = wrdhupper(nonexistingletters)
-    misallignedletters = wrdhupper(misallignedletters)
-    onspotletters = wrdhupper(onspotletters)
+    onspot      = input("Onspot letters (place . for others)..... : ")
+    misaligned  = input("Misalligned letters (place . for others) : ")
+    nonexisting = input("Non existing letters: ")
+
+    nonexisting = wrdhupper(nonexisting)
+    misaligned = wrdhupper(misaligned)
+    onspot = wrdhupper(onspot)
     
-    print("Number of words ",len(words))
-    
-    exp = ''.join(onspotletters)
-    p = re.compile(exp)
-    words[:] = [w for w in words if p.search(w)]            
-    print("Number of words after selecting of words w/ matching '"+exp+"' is ", len(words))
-    print(words)
+    text = "Number of words "+str(len(words))
+    termcolor.cprint(text, 'red')
     
     exp=''
-    if len(nonexistingletters) > 0:
-        exp = ''.join(nonexistingletters)
+    if len(nonexisting) > 0:
+        exp = ''.join(nonexisting)
         p = re.compile('['+exp+']')
         words[:] = [w for w in words if not p.search(w)]            
     print("Number of words after removal of words containing '"+exp+"' is ", len(words))
     print(words)
     
-    exp=''
-    if len(misallignedletters) > 0:
-        # exp = ''.join(misallignedletters)
-        # p = re.compile(exp)
-        # words[:] = [w for w in words if p.search(w)]            
-        words[:] = [w for w in words if hasAll(w, misallignedletters)]            
-    print("Number of words after selecting of words containing '"+misallignedletters+"' is ", len(words))
-    print(words)
+    if any(letter != ANYLETTER for letter in list(misaligned)):
+        '''word must include misaligned letters'''
+        words[:] = [w for w in words if hasAll(w,misaligned)]
+        '''but NOT in given places'''
+        exp='^'
+        for c in misaligned:
+            if c == ANYLETTER:
+                exp+=ANYLETTER
+            else:
+                exp+=notLetter(c)
+        exp+='$'                
+        print (f"RegEx '{exp}'")
+        p = re.compile(''.join(exp))
+        words[:] = [w for w in words if p.match(w)]
+    print("Number of words after removing misaligned letters '"+misaligned+"' is ", len(words))
+        
  
-    words[:] = [w for w in words if hasAll(w, misallignedletters)]            
-     
+    exp = ''.join(onspot)
+    p = re.compile(exp)
+    words[:] = [w for w in words if p.search(w)]            
+    print("Number of words after selecting of words w/ matching '"+exp+"' is ", len(words))
+    print(words)
+    
+ 
+def notLetter(c):
+    return f"[^{c}]"
+
+
 def hasAll (word, letters):
-    return all (c in word for c in letters)
+    return all (c==ANYLETTER or c in word for c in letters)
+
  
 if __name__ == "__main__":
     try:

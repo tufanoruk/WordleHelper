@@ -18,7 +18,7 @@ __email__ = "tufan.oruk@gmail.com"
     "state" is build from the feedback game provides about the guess.
     A letter in the guess is etiher 
     - not-exist, 
-    - exist but misalligned or 
+    - exist but misaligned or 
     - on spot
 
 Say the word selected by the game is "TUFAN"
@@ -30,8 +30,8 @@ Your first guess is "BRAIN" thus game provies following information about the le
 A sample flow is below;
 
 % python3 ./wordlehelp.py <five letter word list file> BRAIN
-Letters in correct place: N
-Letters in wrong place  : A
+Letters in correct place: ....N
+Letters in wrong place  : ..A..
 (
     program figures out B,R and I are not exist in the word.
     and provides a list of 5 letter words to select from,
@@ -41,7 +41,7 @@ Letters not exist       : BRI
 Possible words;
 ..........
 Enter your next guess   : WOMAN
-Letters in correct place: AN
+Letters in correct place: ...AN
 Letters in wrong place  : 
 (
     program figures out W,O and M do not exist in the word.
@@ -62,10 +62,6 @@ ANYLETTER='.'
 
 ''' To pass "the Turkey Test" İIiı upper lower conversions must be provided
 '''
-TRLOWERMAP={
-    ord(u'I'): u'ı',
-    ord(u'İ'): u'i',
-}
 
 TRUPPERMAP={
     ord(u'ı'): u'I',
@@ -74,9 +70,6 @@ TRUPPERMAP={
 
 def wrdhupper(str):
     return str.translate(TRUPPERMAP).upper()
-
-def wrdhlower(str):
-    return str.translate(TRLOWERMAP).lower()
 
 def print_usage():
     print('''Usage: wordlehelp.py <word list file> <first guess>''')
@@ -90,34 +83,54 @@ class SolutionSet():
         
         self.words=[wrdhupper(w).rsplit()[0] for w in self.words]
         self.words.sort();
-        self.words = list(set(self.words))
+        self.words=list(set(self.words))
+
+
+    def __notLetter(self, c):
+        return f"[^{c}]"
         
-    def removeWords(self, nonexistingletters, existingletters, onspotletters):
+    def __hasAll (self, word, letters):
+        return all (c==ANYLETTER or c in word for c in letters)
+    
+    def removeWords(self, nonexisting, misaligned, onspot):
         '''reduce the solution set from the provided information
-        select the words whith letters on the spot.
-        remove words that contains nonexistingletters and existing letters
+        - remove words that contains nonexisting letters
+        - select words contaninig misaligned letters and remove theones ont he wrong spot
+        - select the words whith letters on the spot.
         '''
         print("Number of words ",len(self.words))
     
-        exp = ''.join(onspotletters)
-        p = re.compile(exp)
-        self.words[:] = [w for w in self.words if p.search(w)]            
-        print("Number of words after selecting of words w/ matching '"+exp+"' is ", len(self.words))
-        #print(self.words)
-        
         exp=''
-        if len(nonexistingletters) > 0:
-            exp = ''.join(nonexistingletters)
+        if len(nonexisting) > 0:
+            exp = ''.join(nonexisting)
             p = re.compile('['+exp+']')
             self.words[:] = [w for w in self.words if not p.search(w)]            
-        print("Number of words after removal of words containing '"+exp+"' is ", len(self.words))
-        #print(self.words)
+        print("Number of words after removal of letters containing '"+exp+"' is ", len(self.words))
+
+        if any(letter != ANYLETTER for letter in list(misaligned)):
+            '''word must include misaligned letters'''
+            self.words[:] = [w for w in self.words if self.__hasAll(w,misaligned)]
+            '''but not in given places'''
+            exp='^'
+            for c in misaligned:
+                if c == ANYLETTER:
+                    exp+=ANYLETTER
+                else:
+                    exp+=self.__notLetter(c)
+            exp+='$'                
+            print (f"RegEx '{exp}'")
+            p = re.compile(''.join(exp))
+            self.words[:] = [w for w in self.words if p.match(w)]
+        print("Number of words after removing misaligned letters '"+misaligned+"' is ", len(self.words))
         
-        if len(existingletters) > 0:
-            self.words[:] = [w for w in self.words if self.__hasAll(w, existingletters)]            
-        print("Number of words after selecting of words containing '"+existingletters+"' is ", len(self.words))
-        #print(self.words)
-        self.words.sort()
+        if any(letter != ANYLETTER for letter in list(onspot)):        
+            exp=''.join(onspot)
+            p=re.compile(exp)
+            self.words[:]=[w for w in self.words if p.match(w)]            
+        print("Number of words after selecting of words w/ matching '"+onspot+"' is ", len(self.words))
+            
+        self.words.sort() # this is the remaning word list
+
         
     def has(self, word):
         return word in self.words
@@ -129,9 +142,7 @@ class SolutionSet():
         for w in self.words:
             print(w, end=",") # print adds \n to the end 
             
-    def __hasAll (self, word, letters):
-        return all (c in word for c in letters)
-
+   
 class Node():
     '''state is a State object, parent is a Node object, 
     action is the guesses word which takes us here'''
@@ -163,9 +174,9 @@ class Frontier():
             raise Exception("Empty frontier")
         else:
             node = self.nodes[-1]
-            self.solutionSet.removeWords(nonexistingletters=node.state.notexist,
-                                     existingletters=node.state.misalligned,
-                                     onspotletters=node.state.onspot)
+            self.solutionSet.removeWords(nonexisting=node.state.notexist,
+                                     misaligned=node.state.misaligned,
+                                     onspot=node.state.onspot)
 
             return node
 
@@ -178,34 +189,34 @@ class State():
     we take this feedback from the user here and form the state'''
     def __init__(self, guess):
         self.notexist = []
-        self.misalligned = []
+        self.misaligned = [ANYLETTER, ANYLETTER, ANYLETTER, ANYLETTER, ANYLETTER]
         self.onspot =[ANYLETTER, ANYLETTER, ANYLETTER, ANYLETTER, ANYLETTER]
         self.__getInput(guess)
 
+    def __check(self, guess, entry):
+        if len(entry.strip()) == 0:
+            '''empty line is '.....' '''
+            entry=5*ANYLETTER
+        else:        
+            entry = wrdhupper(entry)
+            if not all(letter==ANYLETTER or letter in list(guess) for letter in list(entry)):
+                raise Exception("There is a wrong letter in the entry ", entry)
+            if len(entry) != 5:
+                raise Exception("Did you forget to put . for other letters? ", entry)
+        return entry
+    
     def __getInput(self, guess):    
         guess = wrdhupper(guess)
         print("For guessed word '"+guess+"' enter the feedback provided by the game")
         
-        match = input("Letters in correct place: ")
-        match = wrdhupper(match)
-        if not all(letter in list(guess) for letter in list(match)):
-            raise Exception("There is a wrong letter in the entry ", match)
+        self.onspot = input("Letters in correct place (place . for others) : ")
+        self.onspot = self.__check(guess, self.onspot)
         
-        self.misalligned = input("Letters in wrong place  : ")
-        self.misalligned = wrdhupper(self.misalligned)
-        if not all(letter in list(guess) for letter in list(self.misalligned)):
-            raise Exception("There is a wrong letter in the entry ", self.misalligned)
-
-        for matchedletter in list(match):
-            i=0
-            for letter in list(guess):
-                if matchedletter==letter:
-                    self.onspot[i] = letter 
-                    break
-                i=i+1                    
+        self.misaligned = input("Letters in wrong place (place . for others).. : ")
+        self.misaligned = self.__check(guess, self.misaligned)
 
         for letter in list(guess):
-            if letter not in match + self.misalligned:
+            if letter not in self.onspot + self.misaligned:
                 self.notexist.append(letter)
         
         print("Letters not exist : ", ''.join(self.notexist))
@@ -214,8 +225,9 @@ class State():
         print(''.join(self.onspot), end="")
         
     def isGoal(self):
-        '''there souldn't be any misalligned and nonexisting letters and have a full match'''
-        return len(self.misalligned) == 0 and len(self.notexist) == 0 and all (letter != 'ANYLETTER' for letter in self.onspot)
+        '''there souldn't be any misaligned and nonexisting letters and have a full match'''
+        return all (letter != ANYLETTER for letter in self.onspot)
+        #len(self.misaligned) == 0 and len(self.notexist) == 0 and 
 
 class  Wordle():
     '''helps solving the puzzle '''
@@ -246,8 +258,6 @@ class  Wordle():
         '''
         start = Node(state=self.state, parent=None, action=None)        
         self.frontier.addNode(start)
-        
-        #start.state.print()
         
         while True:
             if self.frontier.isEmpty():
