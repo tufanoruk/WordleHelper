@@ -12,3 +12,11 @@ This is just to feed for my enthusiasm to apply new AI course search algorithm t
 Usage: 
 % python3 ./wordlehelp.py <file contains 5 letter words> <initial guess>
 ```
+
+---
+
+To run from Docker image
+
+```bash
+% docker run -it --rm  toruk/wordlehelper <initial guess>
+```
