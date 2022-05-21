@@ -86,13 +86,13 @@ class SolutionSet():
         self.words=list(set(self.words))
 
 
-    def __notLetter(self, c):
+    def __not_letter(self, c):
         return f"[^{c}]"
         
-    def __hasAll (self, word, letters):
+    def __has_all (self, word, letters):
         return all (c==ANYLETTER or c in word for c in letters)
     
-    def removeWords(self, nonexisting, misaligned, onspot):
+    def remove_words(self, nonexisting, misaligned, onspot):
         '''reduce the solution set from the provided information
         - remove words that contains nonexisting letters
         - select words contaninig misaligned letters and remove theones ont he wrong spot
@@ -109,14 +109,14 @@ class SolutionSet():
 
         if any(letter != ANYLETTER for letter in list(misaligned)):
             '''word must include misaligned letters'''
-            self.words[:] = [w for w in self.words if self.__hasAll(w,misaligned)]
+            self.words[:] = [w for w in self.words if self.__has_all(w,misaligned)]
             '''but not in given places'''
             exp='^'
             for c in misaligned:
                 if c == ANYLETTER:
                     exp+=ANYLETTER
                 else:
-                    exp+=self.__notLetter(c)
+                    exp+=self.__not_letter(c)
             exp+='$'                
             print (f"RegEx '{exp}'")
             p = re.compile(''.join(exp))
@@ -135,8 +135,8 @@ class SolutionSet():
     def has(self, word):
         return word in self.words
         
-    def isEmpty(self):
-           return len(self.words) == 0
+    def is_empty(self):
+        return len(self.words) == 0
         
     def dump(self):
         for w in self.words:
@@ -162,25 +162,25 @@ class Node():
 class Frontier():
     '''Possible sollutions for the problem'''
     def __init__(self, solution_set):
-        self.solutionSet=solution_set
+        self.solution_set=solution_set
         self.nodes = []
 
-    def addNode(self, node):
+    def add_node(self, node):
         self.nodes.append(node)
         
-    def removeNode(self):
+    def remove_node(self):
         '''removing node reduces the solution set to make us closer to the solution'''
-        if self.isEmpty(): 
+        if self.is_empty(): 
             raise Exception("Empty frontier")
         else:
             node = self.nodes[-1]
-            self.solutionSet.removeWords(nonexisting=node.state.notexist,
+            self.solution_set.removeWords(nonexisting=node.state.notexist,
                                      misaligned=node.state.misaligned,
                                      onspot=node.state.onspot)
 
             return node
 
-    def isEmpty(self):
+    def is_empty(self):
         return len(self.nodes) == 0
 
 
@@ -191,7 +191,7 @@ class State():
         self.notexist = []
         self.misaligned = [ANYLETTER, ANYLETTER, ANYLETTER, ANYLETTER, ANYLETTER]
         self.onspot =[ANYLETTER, ANYLETTER, ANYLETTER, ANYLETTER, ANYLETTER]
-        self.__getInput(guess)
+        self.__get_input(guess)
 
     def __check(self, guess, entry):
         if len(entry.strip()) == 0:
@@ -205,7 +205,7 @@ class State():
                 raise Exception("Did you forget to put . for other letters? ", entry)
         return entry
     
-    def __getInput(self, guess):    
+    def __get_input(self, guess):    
         guess = wrdhupper(guess)
         print("For guessed word '"+guess+"' enter the feedback provided by the game")
         
@@ -224,7 +224,7 @@ class State():
     def print(self):
         print(''.join(self.onspot), end="")
         
-    def isGoal(self):
+    def is_goal(self):
         '''there souldn't be any misaligned and nonexisting letters and have a full match'''
         return all (letter != ANYLETTER for letter in self.onspot)
         #len(self.misaligned) == 0 and len(self.notexist) == 0 and 
@@ -257,13 +257,13 @@ class  Wordle():
             - expand node, add adjacent  nodes to frontier if they aren't already in the frontier OR the explored set
         '''
         start = Node(state=self.state, parent=None, action=None)        
-        self.frontier.addNode(start)
+        self.frontier.add_node(start)
         
         while True:
-            if self.frontier.isEmpty():
+            if self.frontier.is_empty():
                 raise Exception("There is no solution!")
             
-            node = self.frontier.removeNode()
+            node = self.frontier.remove_node()
             
             if node.state.isGoal():
                 print("Solution is ", end="")
@@ -273,18 +273,18 @@ class  Wordle():
                 return
 
             '''action to get to the next state'''
-            self.frontier.solutionSet.dump()
+            self.frontier.solution_set.dump()
             print("")
             while True:        
                 guess = input("Guess a new word : ")
-                if (not self.frontier.solutionSet.has(wrdhupper(guess))):
+                if (not self.frontier.solution_set.has(wrdhupper(guess))):
                     print("This guess is not in the solution set!")
                 else:
                     break
             
             state = State (guess)
             child = Node(state=state, parent=node, action=guess)
-            self.frontier.addNode(child)
+            self.frontier.add_node(child)
 
 def main():
     if len(sys.argv) != 3:

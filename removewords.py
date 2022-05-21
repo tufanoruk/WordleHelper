@@ -48,14 +48,14 @@ def main():
     
     if any(letter != ANYLETTER for letter in list(misaligned)):
         '''word must include misaligned letters'''
-        words[:] = [w for w in words if hasAll(w,misaligned)]
+        words[:] = [w for w in words if has_all(w,misaligned)]
         '''but NOT in given places'''
         exp='^'
         for c in misaligned:
             if c == ANYLETTER:
                 exp+=ANYLETTER
             else:
-                exp+=notLetter(c)
+                exp+=not_letter(c)
         exp+='$'                
         print (f"RegEx '{exp}'")
         p = re.compile(''.join(exp))
@@ -70,11 +70,11 @@ def main():
     print(words)
     
  
-def notLetter(c):
+def not_letter(c):
     return f"[^{c}]"
 
 
-def hasAll (word, letters):
+def has_all (word, letters):
     return all (c==ANYLETTER or c in word for c in letters)
 
  

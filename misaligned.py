@@ -16,10 +16,10 @@ def wrdhupper(str):
     return str.translate(TRUPPERMAP).upper()
 
 
-def notLetter(c):
+def not_letter(c):
     return f"[^{c}]"
 
-def hasAll (word, letters):
+def has_all (word, letters):
         return all (c==ANYLETTER or c in word for c in letters)
 
 def main():
@@ -46,10 +46,10 @@ def main():
         if c == ANYLETTER:
             exp+=ANYLETTER
         else:
-            exp+=notLetter(c)
+            exp+=not_letter(c)
     exp+='$'  
     if any(c != ANYLETTER for c in exp):
-        words[:] = [w for w in words if hasAll(w,misaligned)]
+        words[:] = [w for w in words if has_all(w,misaligned)]
         print(words)
         print (f"RegEx '{exp}'")
         p = re.compile(''.join(exp))
