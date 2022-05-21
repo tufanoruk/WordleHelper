@@ -1,0 +1,21 @@
+# comment
+*/temp*
+*/*/temp*
+temp?
+.DS_Store
+.dockerignore
+.settings
+.project
+.vscode
+.git
+.gitignore
+.includepath
+Dockerfile
+Turkce-txtturkce_kelime_listesi/
+*.md
+*.yml
+misalligned.py
+removewords.py
+requirements.txt
+t1.txt
+turkce_kelime_listesi.txt

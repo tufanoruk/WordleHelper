@@ -174,7 +174,7 @@ class Frontier():
             raise Exception("Empty frontier")
         else:
             node = self.nodes[-1]
-            self.solution_set.removeWords(nonexisting=node.state.notexist,
+            self.solution_set.remove_words(nonexisting=node.state.notexist,
                                      misaligned=node.state.misaligned,
                                      onspot=node.state.onspot)
 
@@ -265,7 +265,7 @@ class  Wordle():
             
             node = self.frontier.remove_node()
             
-            if node.state.isGoal():
+            if node.state.is_goal():
                 print("Solution is ", end="")
                 node.state.print()
                 '''print how we get here'''
